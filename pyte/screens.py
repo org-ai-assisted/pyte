@@ -37,7 +37,7 @@ from collections import deque, defaultdict
 from functools import lru_cache
 from typing import TYPE_CHECKING, NamedTuple, TypeVar
 
-from wcwidth import wcwidth as _wcwidth, wcswidth as _wcswidth  # type: ignore[import-untyped]
+from wcwidth import wcwidth as _wcwidth, wcswidth as _wcswidth
 
 from . import (
     charsets as cs,
