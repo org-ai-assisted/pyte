@@ -1212,7 +1212,11 @@ class HistoryScreen(Screen):
         """
         if event in ["prev_page", "next_page"]:
             for line in self.buffer.values():
-                for x in line:
+                # Iterate over a snapshot of the keys: popping from ``line``
+                # while iterating it directly raises "dictionary changed size
+                # during iteration" (reachable when a wider line paged in from
+                # history is trimmed after a resize to fewer columns).
+                for x in list(line):
                     if x > self.columns:
                         line.pop(x)
 
