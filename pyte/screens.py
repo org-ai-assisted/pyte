@@ -972,9 +972,10 @@ class Screen:
         self.cursor.y = (line or 1) - 1
 
         # If origin mode (DECOM) is set, line number are relative to
-        # the top scrolling margin.
-        if mo.DECOM in self.mode:
-            assert self.margins is not None
+        # the top scrolling margin. With no scrolling region defined the
+        # origin is the top of the screen, so treat a missing margin as 0
+        # rather than crashing (mirrors :meth:`cursor_position`).
+        if mo.DECOM in self.mode and self.margins is not None:
             self.cursor.y += self.margins.top
 
             # FIXME: should we also restrict the cursor to the scrolling
@@ -1075,9 +1076,10 @@ class Screen:
             x = self.cursor.x + 1
             y = self.cursor.y + 1
 
-            # "Origin mode (DECOM) selects line numbering."
-            if mo.DECOM in self.mode:
-                assert self.margins is not None
+            # "Origin mode (DECOM) selects line numbering." With no scrolling
+            # region defined the origin is the top of the screen, so treat a
+            # missing margin as 0 rather than crashing.
+            if mo.DECOM in self.mode and self.margins is not None:
                 y -= self.margins.top
             self.write_process_input(ctrl.CSI + f"{y};{x}R")
 
