@@ -337,7 +337,11 @@ class Stream:
                         # in the sequence received after CAN or SUB.
                         draw(char)
                         break
-                    elif char.isdigit():
+                    elif char in "0123456789":
+                        # Only ASCII digits are valid CSI parameters. ``str``'s
+                        # ``isdigit()`` also accepts characters such as
+                        # superscripts that ``int()`` cannot parse, which would
+                        # raise ``ValueError`` below.
                         current += char
                     elif char == "$":
                         # XTerm-specific ESC]...$[a-z] sequences are not
@@ -350,10 +354,18 @@ class Stream:
                         if char == ";":
                             current = ""
                         else:
-                            if private:
-                                csi_dispatch[char](*params, private=True)
-                            else:
-                                csi_dispatch[char](*params)
+                            handler = csi_dispatch[char]
+                            try:
+                                if private:
+                                    handler(*params, private=True)
+                                else:
+                                    handler(*params)
+                            except TypeError:
+                                # Malformed CSI: more parameters than the
+                                # handler accepts, or a private ("?") marker on
+                                # a command that has no private form. Route it
+                                # to the catch-all rather than crashing feed().
+                                debug(*params, private=private)
                             break  # CSI is finished.
             elif char == OSC_C1:
                 code = yield None

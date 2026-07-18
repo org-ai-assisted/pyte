@@ -787,6 +787,8 @@ class Screen:
             interval = range(self.cursor.x + 1)
         elif how == 2:
             interval = range(self.columns)
+        else:
+            return  # Unsupported erase mode -- ignore rather than crash.
 
         line = self.buffer[self.cursor.y]
         for x in interval:
@@ -821,6 +823,8 @@ class Screen:
             interval = range(self.cursor.y)
         elif how == 2 or how == 3:
             interval = range(self.lines)
+        else:
+            return  # Unsupported erase mode -- ignore rather than crash.
 
         self.dirty.update(interval)
         for y in interval:
