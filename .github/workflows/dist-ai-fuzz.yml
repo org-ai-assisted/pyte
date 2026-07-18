@@ -1,0 +1,36 @@
+## Copyright (C) 2026 - 2026 ENCRYPTED SUPPORT LLC <adrelanos@whonix.org>
+## See the file COPYING for copying conditions.
+
+## AI-Assisted
+
+## Runs this fork's dist-ai FUZZ suite (pyte-tests-fuzz, which lives in
+## org-ai-assisted/dist-ai, not in-tree) on each PR and on push to master.
+## This is NOT the managed consumer-dist-ai-tests.yml template (that one gates
+## the --core category); this one gates --fuzz so the in-process
+## Stream/ByteStream/Screen parser fuzzer runs on every change too. The
+## component is derived from the repo name by the reusable.
+##
+## Reusable docs:
+## https://github.com/org-ai-assisted/developer-meta-files/blob/master/.github/workflows/reusable-dist-ai-tests.yml
+
+name: dist-ai fuzz
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dist-ai-fuzz:
+    uses: org-ai-assisted/developer-meta-files/.github/workflows/reusable-dist-ai-tests.yml@master
+    with:
+      categories: '--fuzz'

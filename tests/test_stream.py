@@ -200,9 +200,9 @@ def test_set_title_icon_name(osc, st):
     stream.feed(osc + "0;bar" + st)
     assert screen.title == screen.icon_name == "bar"
 
-    # e) test ➜ ('\xe2\x9e\x9c') symbol, that contains string terminator \x9c
-    stream.feed("➜")
-    assert screen.buffer[0][0].data == "➜"
+    # e) test \u279c ('\xe2\x9e\x9c') symbol, that contains string terminator \x9c
+    stream.feed("\u279c")
+    assert screen.buffer[0][0].data == "\u279c"
 
 
 def test_compatibility_api():
@@ -215,7 +215,7 @@ def test_compatibility_api():
     stream.attach(pyte.Screen(80, 24))
 
     # b) feeding text
-    stream.feed("привет")
+    stream.feed("\u043f\u0440\u0438\u0432\u0435\u0442")
 
     # c) detaching an attached screen.
     stream.detach(screen)
@@ -262,7 +262,7 @@ def test_debug_stream(input, expected):
     stream.feed(input)
 
     output.seek(0)
-    assert [eval(line) for line in output] == expected
+    assert [eval(line) for line in output] == expected  # nosec B307 - eval of the test's own DebugScreen output
 
 
 def test_handler_exception():
@@ -290,9 +290,9 @@ def test_byte_stream_feed():
     screen.draw = handler = argcheck()
 
     stream = pyte.ByteStream(screen)
-    stream.feed("Нерусский текст".encode())
+    stream.feed("\u041d\u0435\u0440\u0443\u0441\u0441\u043a\u0438\u0439 \u0442\u0435\u043a\u0441\u0442".encode())
     assert handler.count == 1
-    assert handler.args == ("Нерусский текст", )
+    assert handler.args == ("\u041d\u0435\u0440\u0443\u0441\u0441\u043a\u0438\u0439 \u0442\u0435\u043a\u0441\u0442", )
 
 
 def test_byte_stream_define_charset_unknown():

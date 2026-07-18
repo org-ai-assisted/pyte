@@ -94,7 +94,7 @@ def resolve_tag():
     from urllib.request import urlopen
     from urllib.error import HTTPError
     try:
-        urlopen(linkcode_base_url + release)
+        urlopen(linkcode_base_url + release)  # nosec B310 - fixed https docs URL, build-time only
     except HTTPError:
         return "master"
     else:
