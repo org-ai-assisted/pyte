@@ -7,5 +7,12 @@
 ## workflow runtime. Here: the apt packages the pyte-tests dist-ai suite needs
 ## (pyte itself is imported from this checkout via PYTE_REPO, so it is not
 ## installed as a package).
+coverity:
+  ## scan.coverity.com project name (the org owner registers this project and
+  ## sets the COVERITY_SCAN_TOKEN + COVERITY_SCAN_EMAIL repo secrets). Adjust to
+  ## match the registered project.
+  project-name:    "org-ai-assisted/pyte"
+  canonical-repos: "selectel/pyte,org-ai-assisted/pyte"
+
 dist-ai-tests:
   apt-packages: "python3 python3-pytest python3-hypothesis python3-wcwidth"
