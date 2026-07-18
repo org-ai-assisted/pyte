@@ -349,6 +349,13 @@ class Screen:
                     line.pop(x, None)
 
         self.lines, self.columns = lines, columns
+        # Clamp the cursor into the new geometry: the save/restore above runs
+        # ensure_?bounds() while self.lines/self.columns still held the old
+        # size, and the column-shrink path does not re-clamp at all, so a
+        # shrink could otherwise leave the cursor off-screen and lose a
+        # subsequent draw().
+        self.ensure_hbounds()
+        self.ensure_vbounds()
         self.set_margins()
 
     def set_margins(self, top: int | None = None, bottom: int | None = None) -> None:
