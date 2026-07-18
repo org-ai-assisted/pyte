@@ -21,9 +21,9 @@ def print_screen(screen, text):
     print(pyte.control.ESC + pyte.escape.RIS)
 
     for idx, line in enumerate(screen.display, 1):
-        print(f"{idx:2d} {line} ¶")
+        print(f"{idx:2d} {line} \u00b6")
 
-    input(os.linesep + os.linesep + text)
+    input(os.linesep + os.linesep + text)  # nosec B322 - Python 3 input(), interactive demo only
 
 
 def random_string(n, alphabet=string.ascii_letters + " "):
