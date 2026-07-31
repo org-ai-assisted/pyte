@@ -1349,6 +1349,33 @@ def test_erase_in_display():
                               "     "]
 
 
+def test_erase_unhandled_how_is_a_noop():
+    # An erase mode the screen does not implement must be ignored, not
+    # raise. Stream passes CSI parameters through unvalidated, so any
+    # `how` is reachable from untrusted terminal output.
+    expected = ["sam i",
+                "s foo",
+                "but a",
+                "re yo",
+                "u?   "]
+
+    for how in [3, 4, 9, 9999]:
+        screen = update(pyte.Screen(5, 5), expected[:], colored=[0])
+        screen.erase_in_line(how)
+        assert screen.display == expected
+
+    for how in [4, 9, 9999]:
+        screen = update(pyte.Screen(5, 5), expected[:], colored=[0])
+        screen.erase_in_display(how)
+        assert screen.display == expected
+
+    # The same, driven end to end through the parser.
+    for sequence in ["\x1b[9K", "\x1b[9J", "\x1b[4J", "\x1b[9999K"]:
+        screen = update(pyte.Screen(5, 5), expected[:], colored=[0])
+        pyte.Stream(screen).feed(sequence)
+        assert screen.display == expected
+
+
 def test_cursor_up():
     screen = pyte.Screen(10, 10)
 

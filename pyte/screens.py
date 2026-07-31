@@ -787,6 +787,11 @@ class Screen:
             interval = range(self.cursor.x + 1)
         elif how == 2:
             interval = range(self.columns)
+        else:
+            # A terminal ignores an erase mode it does not implement; the
+            # parser passes any CSI parameter straight through, so an
+            # unhandled ``how`` must be a no-op rather than a crash.
+            return
 
         line = self.buffer[self.cursor.y]
         for x in interval:
@@ -821,6 +826,9 @@ class Screen:
             interval = range(self.cursor.y)
         elif how == 2 or how == 3:
             interval = range(self.lines)
+        else:
+            # As in erase_in_line: an unrecognised erase mode is ignored.
+            return
 
         self.dirty.update(interval)
         for y in interval:
