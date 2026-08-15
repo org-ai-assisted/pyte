@@ -1463,6 +1463,15 @@ def test_erase_unhandled_how_is_a_noop():
         screen.erase_in_display(how)
         assert screen.display == expected
 
+    # A no-op erase is fully side-effect free: it marks nothing dirty for a
+    # redraw (erase_in_line used to mark the row before validating `how`).
+    screen = update(pyte.Screen(5, 5), expected[:], colored=[0])
+    screen.dirty.clear()
+    screen.erase_in_line(3)
+    assert not screen.dirty
+    screen.erase_in_display(4)
+    assert not screen.dirty
+
     # The same, driven end to end through the parser.
     for sequence in ["\x1b[9K", "\x1b[9J", "\x1b[4J", "\x1b[9999K"]:
         screen = update(pyte.Screen(5, 5), expected[:], colored=[0])

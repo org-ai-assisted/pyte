@@ -798,7 +798,6 @@ class Screen:
         :param bool private: when ``True`` only characters marked as
                              erasable are affected **not implemented**.
         """
-        self.dirty.add(self.cursor.y)
         if how == 0:
             interval = range(self.cursor.x, self.columns)
         elif how == 1:
@@ -808,9 +807,12 @@ class Screen:
         else:
             # A terminal ignores an erase mode it does not implement; the
             # parser passes any CSI parameter straight through, so an
-            # unhandled ``how`` must be a no-op rather than a crash.
+            # unhandled ``how`` must be a no-op rather than a crash. Validate
+            # before touching ``dirty`` so the no-op marks nothing for redraw,
+            # as erase_in_display already does.
             return
 
+        self.dirty.add(self.cursor.y)
         line = self.buffer[self.cursor.y]
         for x in interval:
             line[x] = self.cursor.attrs
