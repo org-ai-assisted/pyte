@@ -672,6 +672,100 @@ def test_linefeed_margins():
     assert (screen.cursor.y, screen.cursor.x) == (1, 0)
 
 
+def test_linefeed_clears_last_column_flag():
+    # A character drawn into the last column with DECAWM on parks the cursor in
+    # the deferred-wrap state (cursor.x == columns). A bare line feed (LNM off,
+    # so no implicit carriage return) resets that last-column flag but keeps the
+    # column, so the next character lands at the last column of the new line --
+    # the staircase a real terminal (xterm, verified by DSR) shows -- not two
+    # rows down with a blank row between. See org-ai-assisted/pyte-audit H.
+    screen = pyte.Screen(3, 3)
+    assert mo.DECAWM in screen.mode
+    assert mo.LNM not in screen.mode
+
+    for ch in "abc":
+        screen.draw(ch)
+    assert (screen.cursor.y, screen.cursor.x) == (0, 3)   # deferred wrap
+
+    screen.linefeed()
+    assert (screen.cursor.y, screen.cursor.x) == (1, 2)   # flag cleared, column kept
+
+    screen.draw("X")
+    assert screen.display == ["abc", "  X", "   "]
+
+
+def test_linefeed_last_column_flag_via_stream():
+    # Same defect through the real feed path: a raw bare "\n" after a
+    # width-filling line must not insert a blank row.
+    screen = pyte.Screen(3, 3)
+    pyte.Stream(screen).feed("abc\nX")
+    assert screen.display == ["abc", "  X", "   "]
+
+
+def test_index_clears_last_column_flag_via_stream():
+    # The reset lives on the index primitive, so a bare IND (ESC D) after a
+    # width-filling line behaves like a line feed.
+    screen = pyte.Screen(3, 3)
+    pyte.Stream(screen).feed("abc\x1bDX")
+    assert screen.display == ["abc", "  X", "   "]
+
+
+def test_cursor_down_clears_last_column_flag():
+    # A relative vertical move (CUD) resets the flag and keeps the column too,
+    # verified against xterm by DSR: down one row, column unchanged.
+    screen = pyte.Screen(3, 3)
+    for ch in "abc":
+        screen.draw(ch)
+    assert (screen.cursor.y, screen.cursor.x) == (0, 3)
+    screen.cursor_down()
+    assert (screen.cursor.y, screen.cursor.x) == (1, 2)
+    screen.draw("X")
+    assert screen.display == ["abc", "  X", "   "]
+
+
+def test_cursor_to_line_clears_last_column_flag():
+    # An absolute vertical move (VPA) resets the flag as well.
+    screen = pyte.Screen(3, 3)
+    for ch in "abc":
+        screen.draw(ch)
+    screen.cursor_to_line(3)              # 1-based -> row index 2
+    assert (screen.cursor.y, screen.cursor.x) == (2, 2)
+    screen.draw("X")
+    assert screen.display == ["abc", "   ", "  X"]
+
+
+def test_last_column_flag_resolved_regardless_of_autowrap():
+    # The last-column park exists with autowrap off too -- the cursor sits at
+    # the last column to overwrite -- so a move resolves it the same way, as
+    # cursor_back already does.
+    screen = pyte.Screen(3, 3)
+    screen.reset_mode(mo.DECAWM)
+    for ch in "abc":
+        screen.draw(ch)
+    assert (screen.cursor.y, screen.cursor.x) == (0, 3)
+    screen.linefeed()
+    assert (screen.cursor.y, screen.cursor.x) == (1, 2)
+
+
+def test_last_column_flag_wide_char_matches_line_end():
+    # A width-2 grapheme after the reset cannot fit in the single remaining
+    # cell. pyte parks such a character at the last column without a stub
+    # (issue #55; see test_draw_width2_line_end) rather than wrapping it, so the
+    # reset path is identical to a plain draw at the last column, not a new
+    # out-of-bounds state.
+    wide = "\u30b3"                       # KATAKANA KO (U+30B3), width-2
+    a = pyte.Screen(3, 3)
+    pyte.Stream(a).feed("abc\n" + wide)       # full line, bare LF, a wide char
+    b = pyte.Screen(3, 3)
+    b.cursor_to_column(3)                     # park at the last column directly
+    b.draw(wide)
+    assert a.buffer[1][2].data == wide
+    assert 3 not in a.buffer[1]               # no stub written off-screen
+    assert a.cursor.x == a.columns
+    assert {k: v.data for k, v in a.buffer[1].items()} == \
+           {k: v.data for k, v in b.buffer[0].items()}
+
+
 def test_tabstops():
     screen = pyte.Screen(10, 10)
 

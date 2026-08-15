@@ -575,10 +575,27 @@ class Screen:
         """Move the cursor to the beginning of the current line."""
         self.cursor.x = 0
 
+    def _clear_last_column_flag(self) -> None:
+        """Resolve a deferred wrap before the cursor moves off the cell.
+
+        A character drawn into the last column parks the cursor one past the
+        end (``cursor.x == columns``): with :data:`~pyte.modes.DECAWM` set the
+        wrap is deferred until the next printable character (the "last column
+        flag"), and either way the next :meth:`draw` reads that state. Any
+        cursor movement resets it, so drop the cursor back onto the last real
+        column first. Without this a line feed (or ``IND``, or a cursor-down)
+        between two width-filling lines advances twice -- once for the move,
+        once for the deferred wrap on the next character -- inserting a blank
+        row, and the reported column sits one past the screen.
+        """
+        if self.cursor.x == self.columns:
+            self.cursor.x -= 1
+
     def index(self) -> None:
         """Move the cursor down one line in the same column. If the
         cursor is at the last line, create a new line at the bottom.
         """
+        self._clear_last_column_flag()
         top, bottom = self.margins or Margins(0, self.lines - 1)
         if self.cursor.y == bottom:
             # TODO: mark only the lines within margins?
@@ -593,6 +610,7 @@ class Screen:
         """Move the cursor up one line in the same column. If the cursor
         is at the first line, create a new line at the top.
         """
+        self._clear_last_column_flag()
         top, bottom = self.margins or Margins(0, self.lines - 1)
         if self.cursor.y == top:
             # TODO: mark only the lines within margins?
@@ -884,6 +902,7 @@ class Screen:
 
         :param int count: number of lines to skip.
         """
+        self._clear_last_column_flag()
         top, _bottom = self.margins or Margins(0, self.lines - 1)
         self.cursor.y = max(self.cursor.y - (count or 1), top)
 
@@ -902,6 +921,7 @@ class Screen:
 
         :param int count: number of lines to skip.
         """
+        self._clear_last_column_flag()
         _top, bottom = self.margins or Margins(0, self.lines - 1)
         self.cursor.y = min(self.cursor.y + (count or 1), bottom)
 
@@ -922,8 +942,7 @@ class Screen:
         """
         # Handle the case when we've just drawn in the last column
         # and would wrap the line on the next :meth:`draw()` call.
-        if self.cursor.x == self.columns:
-            self.cursor.x -= 1
+        self._clear_last_column_flag()
 
         self.cursor.x -= count or 1
         self.ensure_hbounds()
@@ -977,6 +996,7 @@ class Screen:
 
         :param int line: line number to move the cursor to.
         """
+        self._clear_last_column_flag()
         self.cursor.y = (line or 1) - 1
 
         # If origin mode (DECOM) is set, line number are relative to

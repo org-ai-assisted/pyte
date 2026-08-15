@@ -10,6 +10,12 @@ Unreleased
 
 - The minimum Python version supported by pyte is now 3.10.
 - Fixed rendering of multi code-point emoji sequences.
+- Fixed vertical cursor moves not resetting the last-column flag: after a
+  line drawn to the full width with autowrap on, a bare line feed (also
+  ``IND``, reverse index, cursor-up, cursor-down and ``VPA``) advanced twice,
+  leaving a blank row between every full-width line. The flag is now cleared
+  while the column is preserved, as a real terminal does and as
+  ``cursor_back`` already did.
 
 
 Version 0.8.2
