@@ -1,0 +1,9 @@
+## Findings from github.com/org-ai-assisted/pyte-audit that THIS tree fixes,
+## one id per line ('#' starts a comment).
+##
+## Consumed by the pyte-tests suite in github.com/org-ai-assisted/dist-ai: a
+## listed id must pass its regression test (a regression turns the suite red),
+## an unlisted id must still reproduce (fixing it without listing it here is a
+## strict-xfail XPASS, also red). Add the id in the same commit as the fix.
+
+C

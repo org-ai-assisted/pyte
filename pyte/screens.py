@@ -575,10 +575,27 @@ class Screen:
         """Move the cursor to the beginning of the current line."""
         self.cursor.x = 0
 
+    def _clear_last_column_flag(self) -> None:
+        """Resolve a deferred wrap before the cursor moves off the cell.
+
+        A character drawn into the last column parks the cursor one past the
+        end (``cursor.x == columns``): with :data:`~pyte.modes.DECAWM` set the
+        wrap is deferred until the next printable character (the "last column
+        flag"), and either way the next :meth:`draw` reads that state. Any
+        cursor movement resets it, so drop the cursor back onto the last real
+        column first. Without this a line feed (or ``IND``, or a cursor-down)
+        between two width-filling lines advances twice -- once for the move,
+        once for the deferred wrap on the next character -- inserting a blank
+        row, and the reported column sits one past the screen.
+        """
+        if self.cursor.x == self.columns:
+            self.cursor.x -= 1
+
     def index(self) -> None:
         """Move the cursor down one line in the same column. If the
         cursor is at the last line, create a new line at the bottom.
         """
+        self._clear_last_column_flag()
         top, bottom = self.margins or Margins(0, self.lines - 1)
         if self.cursor.y == bottom:
             # TODO: mark only the lines within margins?
@@ -593,6 +610,7 @@ class Screen:
         """Move the cursor up one line in the same column. If the cursor
         is at the first line, create a new line at the top.
         """
+        self._clear_last_column_flag()
         top, bottom = self.margins or Margins(0, self.lines - 1)
         if self.cursor.y == top:
             # TODO: mark only the lines within margins?
@@ -780,14 +798,21 @@ class Screen:
         :param bool private: when ``True`` only characters marked as
                              erasable are affected **not implemented**.
         """
-        self.dirty.add(self.cursor.y)
         if how == 0:
             interval = range(self.cursor.x, self.columns)
         elif how == 1:
             interval = range(self.cursor.x + 1)
         elif how == 2:
             interval = range(self.columns)
+        else:
+            # A terminal ignores an erase mode it does not implement; the
+            # parser passes any CSI parameter straight through, so an
+            # unhandled ``how`` must be a no-op rather than a crash. Validate
+            # before touching ``dirty`` so the no-op marks nothing for redraw,
+            # as erase_in_display already does.
+            return
 
+        self.dirty.add(self.cursor.y)
         line = self.buffer[self.cursor.y]
         for x in interval:
             line[x] = self.cursor.attrs
@@ -821,6 +846,9 @@ class Screen:
             interval = range(self.cursor.y)
         elif how == 2 or how == 3:
             interval = range(self.lines)
+        else:
+            # As in erase_in_line: an unrecognised erase mode is ignored.
+            return
 
         self.dirty.update(interval)
         for y in interval:
@@ -876,6 +904,7 @@ class Screen:
 
         :param int count: number of lines to skip.
         """
+        self._clear_last_column_flag()
         top, _bottom = self.margins or Margins(0, self.lines - 1)
         self.cursor.y = max(self.cursor.y - (count or 1), top)
 
@@ -894,6 +923,7 @@ class Screen:
 
         :param int count: number of lines to skip.
         """
+        self._clear_last_column_flag()
         _top, bottom = self.margins or Margins(0, self.lines - 1)
         self.cursor.y = min(self.cursor.y + (count or 1), bottom)
 
@@ -914,8 +944,7 @@ class Screen:
         """
         # Handle the case when we've just drawn in the last column
         # and would wrap the line on the next :meth:`draw()` call.
-        if self.cursor.x == self.columns:
-            self.cursor.x -= 1
+        self._clear_last_column_flag()
 
         self.cursor.x -= count or 1
         self.ensure_hbounds()
@@ -969,6 +998,7 @@ class Screen:
 
         :param int line: line number to move the cursor to.
         """
+        self._clear_last_column_flag()
         self.cursor.y = (line or 1) - 1
 
         # If origin mode (DECOM) is set, line number are relative to
