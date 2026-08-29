@@ -18,6 +18,7 @@ testpaths = [
 [dependency-groups]
 dev = [
     "pytest",
+    "hypothesis",
     "pyperf==1.7.1",
     "mypy==1.14.1",
 ]
