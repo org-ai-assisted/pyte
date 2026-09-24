@@ -7,3 +7,4 @@
 ## strict-xfail XPASS, also red). Add the id in the same commit as the fix.
 
 C
+H
