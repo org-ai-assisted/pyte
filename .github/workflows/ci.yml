@@ -9,10 +9,20 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     name: "Python ${{ matrix.python-version }}"
+    ## CI runs only where we enabled it (org variable) and only for same-repo
+    ## PRs, never a fork's. Unset / fork PR -> skipped, no runner, run stays green.
+    if: >-
+      vars.CI_ENABLED_ORG_AI_ASSISTED == 'true'
+      && (github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     strategy:
       matrix:
@@ -21,8 +31,8 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-      - uses: "actions/checkout@v4"
-      - uses: "actions/setup-python@v5"
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
             python-version: "${{ matrix.python-version }}"
       - name: "Install dependencies"

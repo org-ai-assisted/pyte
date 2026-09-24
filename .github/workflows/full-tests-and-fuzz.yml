@@ -11,10 +11,23 @@ on:
   pull_request:
     branches: ["master"]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   tests:
     name: "tests (Python ${{ matrix.python-version }})"
+    ## CI runs only where we enabled it (org variable) and only for same-repo
+    ## PRs, never a fork's. Unset / fork PR -> skipped, no runner, run stays green.
+    if: >-
+      vars.CI_ENABLED_ORG_AI_ASSISTED == 'true'
+      && (github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     strategy:
       fail-fast: false
@@ -25,8 +38,8 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-      - uses: "actions/checkout@v4"
-      - uses: "actions/setup-python@v5"
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "${{ matrix.python-version }}"
       - name: "Install dependencies"
@@ -37,6 +50,7 @@ jobs:
       - name: "Build and install"
         run: |
           set -xe
+          ## style-ok: allow-python-interpreter -- log exact matrix CPython build
           python -VV
           python -m uv build --wheel --sdist
           python -m uv pip install --system dist/pyte*.whl
@@ -54,11 +68,17 @@ jobs:
 
   fuzz:
     name: "fuzz (in-process)"
+    ## CI runs only where we enabled it (org variable) and only for same-repo
+    ## PRs, never a fork's. Unset / fork PR -> skipped, no runner, run stays green.
+    if: >-
+      vars.CI_ENABLED_ORG_AI_ASSISTED == 'true'
+      && (github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-      - uses: "actions/checkout@v4"
-      - uses: "actions/setup-python@v5"
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
         with:
           python-version: "3.13"
       - name: "Install dependencies"
@@ -78,5 +98,6 @@ jobs:
           # Gates on new crash signatures; known defects are allowlisted in
           # tests/known_crashes.json (see BUGS/). Prints seed + sequence on a
           # new finding so it can be turned into a regression test.
+          ## style-ok: allow-python-interpreter -- run under the workflow's selected python, as the surrounding uv calls do
           python tests/fuzz_pyte.py --iterations 200000
         shell: bash
