@@ -1,0 +1,82 @@
+name: full-tests-and-fuzz
+
+# Comprehensive public-API + property tests (tests/test_full_*.py, with
+# Hypothesis) and the in-process fuzz harness (tests/fuzz_pyte.py). Runs
+# alongside ci.yml; the fuzz job gates on NEW crash signatures only (known,
+# already-reported defects are allowlisted in tests/known_crashes.json).
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  tests:
+    name: "tests (Python ${{ matrix.python-version }})"
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # pypy-3.10 is omitted: a transitive Rust build dependency (pyo3-ffi
+        # 0.29) dropped PyPy 3.10 support (requires 3.11+), so the wheel build
+        # fails at install time, unrelated to pyte or these tests.
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "${{ matrix.python-version }}"
+      - name: "Install dependencies"
+        run: |
+          set -xe
+          python -m pip install uv
+        shell: bash
+      - name: "Build and install"
+        run: |
+          set -xe
+          python -VV
+          python -m uv build --wheel --sdist
+          python -m uv pip install --system dist/pyte*.whl
+        shell: bash
+      - name: "Run full suite (unit + property + regression)"
+        run: |
+          set -xe
+          # Hypothesis comes from the dev dependency-group; uv run syncs it.
+          # Change directory to avoid importing pyte from the repo root.
+          pushd tests
+          python -m uv run pytest -vv test_full_api.py \
+            test_full_regressions.py test_full_properties.py
+          popd
+        shell: bash
+
+  fuzz:
+    name: "fuzz (in-process)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: "actions/checkout@v4"
+      - uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.13"
+      - name: "Install dependencies"
+        run: |
+          set -xe
+          python -m pip install uv
+        shell: bash
+      - name: "Build and install"
+        run: |
+          set -xe
+          python -m uv build --wheel
+          python -m uv pip install --system dist/pyte*.whl
+        shell: bash
+      - name: "Fuzz Stream / ByteStream / Screen"
+        run: |
+          set -xe
+          # Gates on new crash signatures; known defects are allowlisted in
+          # tests/known_crashes.json (see BUGS/). Prints seed + sequence on a
+          # new finding so it can be turned into a regression test.
+          python tests/fuzz_pyte.py --iterations 200000
+        shell: bash
