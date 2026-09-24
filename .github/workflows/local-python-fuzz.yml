@@ -49,7 +49,8 @@ concurrency:
 jobs:
   pr:
     name: ClusterFuzzLite PR fuzz
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    ## CI runs only where we enabled it; ANDed with the fork-PR guard.
+    if: vars.CI_ENABLED_ORG_AI_ASSISTED == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -113,7 +114,9 @@ jobs:
 
   batch:
     name: ClusterFuzzLite batch fuzz
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    ## CI runs only where we enabled it; the schedule/dispatch OR is parenthesized
+    ## so the gate covers both arms (a bare 'literal || ...' would not).
+    if: vars.CI_ENABLED_ORG_AI_ASSISTED == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
