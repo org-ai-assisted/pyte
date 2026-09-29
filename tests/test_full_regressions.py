@@ -24,12 +24,11 @@ def feed(data, columns=10, lines=5):
 
 
 # --------------------------------------------------------------------------
-# Bug C -- erase_in_line / erase_in_display crash on an unhandled ``how``.
-# ``interval`` is never assigned for out-of-range values, raising
-# UnboundLocalError.  Expected: unknown ``how`` is a silent no-op.
+# Bug C -- erase_in_line / erase_in_display with an unhandled ``how``.
+# Guard: an out-of-range ``how`` is a silent no-op -- the engine returns
+# rather than raising on the then-unassigned ``interval``.
 # --------------------------------------------------------------------------
 
-@pytest.mark.xfail(strict=True, reason="BUG-C: erase_in_line UnboundLocalError")
 def test_erase_in_line_unknown_how_is_noop():
     screen = pyte.Screen(5, 1)
     screen.draw("abcde")
@@ -37,19 +36,16 @@ def test_erase_in_line_unknown_how_is_noop():
     assert "".join(screen.buffer[0][x].data for x in range(5)) == "abcde"
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-C: erase_in_display UnboundLocalError")
 def test_erase_in_display_unknown_how_is_noop():
     screen = pyte.Screen(3, 2)
     screen.erase_in_display(4)              # no standard meaning
     assert screen.display == ["   ", "   "]
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-C via stream: ESC[3K")
 def test_stream_el_how3_no_crash():
     feed("\x1b[3K")
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-C via stream: ESC[4J")
 def test_stream_ed_how4_no_crash():
     feed("\x1b[4J")
 
